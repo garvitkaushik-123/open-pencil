@@ -1,5 +1,4 @@
-import { useEditorCommands } from '@open-pencil/vue'
-import type { EditorCommandId } from '@open-pencil/vue'
+import { useEditorCommands, type EditorCommandId } from '@open-pencil/vue/editor/commands'
 
 import { useEditorStore } from '@/app/editor/active-store'
 import { clearRecentFiles, forgetRecentFile, recentLocalFileAt } from '@/app/recent-files'
@@ -14,7 +13,7 @@ import { createSaveMenuActions } from '@/app/shell/menu/save-actions'
 import { APP_MENU_SCHEMA, type AppMenuEntry } from '@/app/shell/menu/schema'
 import { SHELL_MENU_IDS } from '@/app/shell/menu/shell'
 import { useAppTheme } from '@/app/shell/theme'
-import { createTab, closeTab, activeTab } from '@/app/tabs'
+import { createTab, closeTab, activeTab, switchAdjacentTab } from '@/app/tabs'
 import { isTauri } from '@/app/tauri/env'
 
 function commandMenuIds(entries: readonly AppMenuEntry[]): EditorCommandId[] {
@@ -44,6 +43,8 @@ export function useEditorMenu() {
     close: () => {
       if (activeTab.value) void closeTab(activeTab.value.id)
     },
+    'previous-tab': () => switchAdjacentTab(-1),
+    'next-tab': () => switchAdjacentTab(1),
     ...createSaveMenuActions(store),
     'export-selection': () => {
       if (store.state.selectedIds.size > 0) void store.exportSelection(1, 'png')
@@ -56,6 +57,9 @@ export function useEditorMenu() {
     },
     'export-pptx': () => {
       if (store.state.selectedIds.size > 0) void store.exportSelection(1, 'pptx')
+    },
+    'export-drawio': () => {
+      if (store.state.selectedIds.size > 0) void store.exportSelection(1, 'drawio')
     },
     'export-fig': () => {
       if (store.state.selectedIds.size > 0) void store.exportSelection(1, 'fig')

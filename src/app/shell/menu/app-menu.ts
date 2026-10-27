@@ -17,8 +17,13 @@ import IconZoomIn from '~icons/lucide/zoom-in'
 import IconZoomOut from '~icons/lucide/zoom-out'
 
 import type { BuiltinIOFormatId } from '@open-pencil/core/io'
-import type { CommandPaletteGroup, CommandPaletteItem, MenuEntry } from '@open-pencil/vue'
-import { shortcutPlatform, useEditorCommands, useI18n } from '@open-pencil/vue'
+import { shortcutPlatform, useEditorCommands } from '@open-pencil/vue/editor/commands'
+import type { MenuEntry } from '@open-pencil/vue/editor/menu-model'
+import { useI18n } from '@open-pencil/vue/i18n'
+import type {
+  CommandPaletteGroup,
+  CommandPaletteItem
+} from '@open-pencil/vue/primitives/CommandPalette'
 
 import { openTour } from '@/app/demo/document'
 import { useEditorStore } from '@/app/editor/active-store'
@@ -46,7 +51,7 @@ import { APP_MENU_SCHEMA } from '@/app/shell/menu/schema'
 import { appMenuShortcutLabel } from '@/app/shell/menu/shortcut'
 import { openFileDialog } from '@/app/shell/menu/use'
 import { useAppTheme } from '@/app/shell/theme'
-import { closeTab, activeTab } from '@/app/tabs'
+import { closeTab, activeTab, switchAdjacentTab } from '@/app/tabs'
 
 export interface AppMenuGroup {
   label: string
@@ -115,6 +120,8 @@ export function useAppMenu() {
     'export-selection': 'exportSelection',
     autosave: 'autosave',
     close: 'closeTab',
+    'previous-tab': 'selectPreviousTab',
+    'next-tab': 'selectNextTab',
     copy: 'copy',
     cut: 'cut',
     paste: 'paste',
@@ -185,6 +192,8 @@ export function useAppMenu() {
     close: () => {
       if (activeTab.value) void closeTab(activeTab.value.id)
     },
+    'previous-tab': () => switchAdjacentTab(-1),
+    'next-tab': () => switchAdjacentTab(1),
     settings: openSettingsDialog,
     variables: () => openVariablesDialog(store),
     'insert-icon': () => {
@@ -193,6 +202,7 @@ export function useAppMenu() {
     'export-png': () => exportSelection('png'),
     'export-svg': () => exportSelection('svg'),
     'export-pptx': () => exportSelection('pptx'),
+    'export-drawio': () => exportSelection('drawio'),
     'export-fig': () => exportSelection('fig'),
     ...createSharedEditorMenuActions(setTheme)
   }

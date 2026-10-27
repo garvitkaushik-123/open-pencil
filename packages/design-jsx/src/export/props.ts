@@ -1,16 +1,13 @@
 import { isEqual, omitBy, pick } from 'es-toolkit'
 
-import {
-  createDefaultNode,
-  layoutSizing,
-  type ArcData,
-  type SceneGraph,
-  type SceneNode
-} from '@open-pencil/scene-graph'
+import type { ArcData, SceneGraph, SceneNode } from '@open-pencil/scene-graph'
 import { DEFAULT_FONT_FAMILY } from '@open-pencil/scene-graph/constants'
-import { resolveNodeTextDirection } from '@open-pencil/scene-graph/text-direction'
+import { layoutSizing } from '@open-pencil/scene-graph/layout'
+import { createDefaultNode } from '@open-pencil/scene-graph/node-defaults'
+import { resolveNodeTextDirection } from '@open-pencil/scene-graph/text/direction'
 
 import { BLEND_MODE, TEXT_ALIGN, TEXT_ALIGN_VERTICAL, TEXT_CASE, TEXT_DECORATION } from '../enums'
+import { textLengthJSX } from '../overrides/text'
 import { collectDecorationProps } from './decoration'
 import { collectFontSettingProps, FONT_SETTING_FIELDS } from './font'
 import {
@@ -23,6 +20,7 @@ import {
 import { collectEffectProps, collectFillProps, collectStrokeProps } from './paint'
 import { collectStateProps } from './state'
 import type { JSXProp } from './value'
+import { variableReferences, type VariableExport } from './variables'
 
 export type { JSXProp } from './value'
 
@@ -265,8 +263,10 @@ function collectTextNodeProps(node: SceneNode, props: JSXProp[]): void {
   if (node.textAlignVertical !== 'TOP') {
     props.push(['textAlignVertical', TEXT_ALIGN_VERTICAL.print(node.textAlignVertical)])
   }
-  if (node.lineHeight != null) props.push(['lineHeight', node.lineHeight])
-  if (node.letterSpacing !== 0) props.push(['letterSpacing', node.letterSpacing])
+  if (node.lineHeight != null) props.push(['lineHeight', textLengthJSX(node.lineHeight)])
+  if (node.letterSpacing.value !== 0) {
+    props.push(['letterSpacing', textLengthJSX(node.letterSpacing)])
+  }
   if (node.textDecoration !== 'NONE')
     props.push(['textDecoration', TEXT_DECORATION.print(node.textDecoration)])
   collectDecorationProps(ownTextFields(node, DECORATION_FIELDS), node, props)
@@ -325,8 +325,15 @@ function collectShapeNodeProps(node: SceneNode, props: JSXProp[]): void {
   }
 }
 
-/** The props of `node`, in the order they are printed. */
-export function collectProps(node: SceneNode, graph: SceneGraph): JSXProp[] {
+/**
+ * The props of `node`, in the order they are printed, with the variables it binds written as
+ * `variables` writes them: by default, by reference to the document's.
+ */
+export function collectProps(
+  node: SceneNode,
+  graph: SceneGraph,
+  variables: VariableExport = variableReferences(graph)
+): JSXProp[] {
   const props: JSXProp[] = []
   const ctx = getNodeContext(node, graph)
 
@@ -343,7 +350,7 @@ export function collectProps(node: SceneNode, graph: SceneGraph): JSXProp[] {
     collectTextAutoResizeProp(node, ctx, props)
   }
   collectShapeNodeProps(node, props)
-  collectStateProps(node, ctx, graph, props)
+  collectStateProps(node, ctx, props, variables)
 
   return props
 }

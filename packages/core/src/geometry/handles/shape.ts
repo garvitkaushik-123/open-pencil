@@ -1,7 +1,9 @@
 import { clamp } from 'es-toolkit'
 
-import type { SceneNode, Vector } from '@open-pencil/scene-graph'
+import type { SceneNode } from '@open-pencil/scene-graph'
 import { POINT_COUNT_RANGE, polygonCorners } from '@open-pencil/scene-graph/polygon'
+import type { Vector } from '@open-pencil/scene-graph/primitives'
+import { independentCornerChanges } from '@open-pencil/scene-graph/variables'
 
 import type { SceneGeometry } from '#core/geometry/scene'
 import type { ViewportTransform } from '#core/geometry/types'
@@ -278,7 +280,7 @@ export function cornerRadiusChanges(
   }
   const radii = { ...cornerRadii(node), [corner]: radius }
   return {
-    independentCorners: true,
+    ...independentCornerChanges(node),
     topLeftRadius: radii.topLeft,
     topRightRadius: radii.topRight,
     bottomRightRadius: radii.bottomRight,

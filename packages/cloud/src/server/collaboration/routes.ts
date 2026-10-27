@@ -3,8 +3,8 @@ import type { CloudActor, CloudSessionResolver } from '#cloud/server/auth'
 import type { CollaborationTicketService } from '#cloud/server/collaboration/service'
 import type { CloudDatabase } from '#cloud/server/db'
 import { DocumentNotFoundError } from '#cloud/server/documents'
-import { CLOUD_RATE_LIMITS, createActorRateLimiter } from '#cloud/server/rate-limit'
-import { DocumentShareInvalidError } from '#cloud/server/sharing'
+import { CLOUD_RATE_LIMITS, createRouteRateLimiter } from '#cloud/server/rate-limit'
+import { DocumentShareInvalidError, DocumentShareSignInRequiredError } from '#cloud/server/sharing'
 import { validatedJSON } from '#cloud/server/validation'
 import { Hono, type Context } from 'hono'
 import type { Kysely } from 'kysely'
@@ -14,6 +14,9 @@ export type CollaborationRouteEnvironment = { Variables: { actor: CloudActor } }
 function notFound(context: Context, error: unknown): Response | null {
   if (error instanceof DocumentNotFoundError || error instanceof DocumentShareInvalidError) {
     return context.json({ error: { code: 'not_found' as const } }, 404)
+  }
+  if (error instanceof DocumentShareSignInRequiredError) {
+    return context.json({ error: { code: 'unauthorized' as const } }, 401)
   }
   return null
 }
@@ -26,7 +29,7 @@ export function createCollaborationRoutes(
   if (rateLimit) {
     router.use(
       '/documents/:documentId/collaboration-ticket',
-      createActorRateLimiter(
+      createRouteRateLimiter(
         rateLimit.database,
         rateLimit.secret,
         CLOUD_RATE_LIMITS.collaborationTicket,

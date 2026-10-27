@@ -1,20 +1,17 @@
+import type { Fill, SceneNode, ArcData, NodeType } from '@open-pencil/scene-graph'
+import { colorToFill } from '@open-pencil/scene-graph/color'
+import { parseCSSGridTracks, parseCSSNumber } from '@open-pencil/scene-graph/css'
 import {
   autoLayoutSizingFields,
   fillSizingFields,
   parseAutoLayoutDirection,
   parseCounterAxisAlign,
-  parsePrimaryAxisAlign,
-  withShaderPaints,
-  type ArcData,
-  type Fill,
-  type NodeType,
-  type SceneNode,
-  type ShaderPaint
-} from '@open-pencil/scene-graph'
-import { colorToFill } from '@open-pencil/scene-graph/color'
-import { parseCSSGridTracks, parseCSSNumber } from '@open-pencil/scene-graph/css'
+  parsePrimaryAxisAlign
+} from '@open-pencil/scene-graph/layout'
 import type { Color, JSONObject } from '@open-pencil/scene-graph/primitives'
+import { withShaderPaints, type ShaderPaint } from '@open-pencil/scene-graph/shaders'
 
+import { DESIGN_JSX_STYLE_KEYS, designJSXProp } from './definitions'
 import {
   BLEND_MODE,
   TEXT_ALIGN,
@@ -28,9 +25,8 @@ import { applyEffectOverrides } from './overrides/effects'
 import { fillFromValue, isColor, isFillValue } from './overrides/fills'
 import { applyStateOverrides } from './overrides/state'
 import { applyStrokeOverrides } from './overrides/strokes'
-import { applyTextDetailOverrides, AUTO } from './overrides/text'
+import { applyTextDetailOverrides, AUTO, textLengthProp } from './overrides/text'
 import { isShaderFill } from './paints'
-import { DESIGN_JSX_STYLE_KEYS, designJSXProp } from './schema'
 
 const WEIGHT_MAP: Record<string, number> = {
   normal: 400,
@@ -353,9 +349,11 @@ function applyTextStyleOverrides(props: Record<string, unknown>, o: Partial<Scen
     o.fills = [colorToFill(props.color)]
   }
 
-  if (props.lineHeight === AUTO) o.lineHeight = null
-  else if (props.lineHeight !== undefined) o.lineHeight = props.lineHeight as number
-  if (props.letterSpacing !== undefined) o.letterSpacing = props.letterSpacing as number
+  // A value it cannot read is left out, so the text keeps its own.
+  const lineHeight = props.lineHeight === AUTO ? null : textLengthProp(props.lineHeight)
+  if (lineHeight !== undefined) o.lineHeight = lineHeight
+  const letterSpacing = textLengthProp(props.letterSpacing)
+  if (letterSpacing) o.letterSpacing = letterSpacing
   const textDecoration = TEXT_DECORATION.parse(props.textDecoration)
   if (textDecoration) o.textDecoration = textDecoration
   applyTextDetailOverrides(props, o)

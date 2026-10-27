@@ -4,14 +4,15 @@ import { guidToString, isUnsetGuid } from '@open-pencil/kiwi/fig/guid'
 import {
   DEFAULT_FONT_FAMILY,
   DEFAULT_STROKE_MITER_LIMIT,
-  DEFAULT_STROKE_WEIGHT,
-  getNodeLocalMatrix,
-  OPEN_PENCIL_PLUGIN_DATA,
-  styleToWeight
-} from '@open-pencil/scene-graph'
+  DEFAULT_STROKE_WEIGHT
+} from '@open-pencil/scene-graph/constants'
+import { getNodeLocalMatrix } from '@open-pencil/scene-graph/coordinate'
+import { styleToWeight } from '@open-pencil/scene-graph/font-style'
 import { createDefaultSourceMetadata } from '@open-pencil/scene-graph/node-defaults'
+import { OPEN_PENCIL_PLUGIN_DATA } from '@open-pencil/scene-graph/plugin-data'
 import { POINT_COUNT_RANGE } from '@open-pencil/scene-graph/polygon'
 import { isShapeWithTextType } from '@open-pencil/scene-graph/shape-with-text'
+import { pixelLength } from '@open-pencil/scene-graph/text'
 import { parseVariantName } from '@open-pencil/scene-graph/variant-name'
 /* eslint-disable max-lines -- kiwi↔scene conversion helpers are tightly coupled */
 
@@ -50,12 +51,19 @@ import { decodeVectorNetworkBlob, textPathStartSegment, type StyleOverride } fro
 
 export { convertEffects, convertFills, convertStrokes, setVariableColorResolver } from './paint'
 export { importStyleRuns } from './style/runs'
-export { convertLetterSpacing, convertLineHeight, mapTextDecoration } from './text/values'
+export {
+  convertLetterSpacing,
+  convertLineHeight,
+  figmaLetterSpacing,
+  figmaLineHeight,
+  mapTextDecoration
+} from './text/values'
 export { resolveGeometryPaths } from './vector/geometry'
 
 import type { NodeChange } from '@open-pencil/kiwi/fig/codec'
 import type {
   SceneNode,
+  TextLength,
   NodeType,
   Fill,
   StrokeCap,
@@ -79,12 +87,10 @@ import type {
   ComponentPropertyType,
   SymbolLink,
   VariantPropSpec,
-  VariableModeMap,
-  Vector
+  VariableModeMap
 } from '@open-pencil/scene-graph'
-import type { GUID } from '@open-pencil/scene-graph/primitives'
+import type { Vector, GUID } from '@open-pencil/scene-graph/primitives'
 
-export { guidToString, stringToGuid } from '@open-pencil/kiwi/fig/guid'
 import { numericVariableAssignmentScales, sourceVariableBindingScales } from './variable/bindings'
 export { VARIABLE_BINDING_FIELDS, VARIABLE_BINDING_FIELDS_INVERSE } from './variable/bindings'
 
@@ -326,19 +332,33 @@ function convertPolygonProps(
  * A text's line height. Figma writes auto as 100 percent, and OpenPencil once wrote none for
  * it; a text in auto lines up each line at its own font's height. Figma saves each line at the
  * larger of its line height and its tallest font's height, so a first line shorter than the
- * text's height in pixels was laid out at another one, which a style the text uses set.
+ * text's height in pixels was laid out at another one, which a style the text uses set. A first
+ * line with a range of its own line height was laid out at the range's, not the text's.
  */
-function importedTextLineHeight(nc: NodeChange): number | null {
+function importedTextLineHeight(nc: NodeChange): TextLength | null {
   if (!nc.lineHeight || isFigmaAutoLineHeight(nc.lineHeight)) return null
-  const derivedLineHeight = nc.derivedTextData?.baselines?.[0]?.lineHeight
+  const firstLine = nc.derivedTextData?.baselines?.[0]
   if (
     nc.lineHeight.units === 'PIXELS' &&
-    derivedLineHeight !== undefined &&
-    Number.isFinite(derivedLineHeight) &&
-    derivedLineHeight < nc.lineHeight.value
+    firstLine !== undefined &&
+    Number.isFinite(firstLine.lineHeight) &&
+    firstLine.lineHeight < nc.lineHeight.value &&
+    !rangeSetsLineHeight(nc, firstLine.firstCharacter, firstLine.endCharacter)
   )
-    return derivedLineHeight
-  return convertLineHeight(nc.lineHeight, nc.fontSize)
+    return pixelLength(firstLine.lineHeight)
+  return convertLineHeight(nc.lineHeight)
+}
+
+/** Whether a character from `start` up to `end` has a line height from its range's style. */
+function rangeSetsLineHeight(nc: NodeChange, start: number, end: number): boolean {
+  const ids = new Set(
+    (nc.textData?.styleOverrideTable ?? [])
+      .filter((style) => style.lineHeight)
+      .map((style) => style.styleID as number | undefined)
+  )
+  return (nc.textData?.characterStyleIDs ?? [])
+    .slice(start, end)
+    .some((id) => id !== 0 && ids.has(id))
 }
 
 type TextProps = Pick<
@@ -367,6 +387,7 @@ type TextProps = Pick<
   | 'hangingList'
   | 'styleRuns'
   | 'fontVariations'
+  | 'opticalSizeFromFontSize'
   | 'fontFeatures'
   | 'textTruncation'
   | 'textDirection'
@@ -449,11 +470,12 @@ function convertTextProps(nc: NodeChange, blobs: Uint8Array[]): TextProps {
     ...convertTextDecorationProps(nc),
     leadingTrim: (nc.leadingTrim ?? 'NONE') as SceneNode['leadingTrim'],
     lineHeight: importedTextLineHeight(nc),
-    letterSpacing: convertLetterSpacing(nc.letterSpacing, nc.fontSize),
+    letterSpacing: convertLetterSpacing(nc.letterSpacing),
     maxLines: (nc.maxLines ?? null) as number | null,
     ...convertParagraphProps(nc),
     styleRuns: importStyleRuns(nc),
     fontVariations: convertFontVariations(nc),
+    opticalSizeFromFontSize: nc.detachOpticalSizeFromFontSize !== true,
     fontFeatures: convertFontFeatures(nc),
     textTruncation: (nc.textTruncation as string) === 'ENDING' ? 'ENDING' : 'DISABLED',
     textDirection: readNodeChangePluginData(nc, OPEN_PENCIL_PLUGIN_DATA.textDirection) ?? 'AUTO',
@@ -741,7 +763,11 @@ export function nodeChangeToProps(
     maxHeight: maximumSizeDimension(nc.maxSize, 'y'),
     targetAspectRatio: targetAspectRatio(nc),
     isMask: nc.mask ?? false,
-    maskType: (nc.maskType ?? 'ALPHA') as 'ALPHA' | 'VECTOR' | 'LUMINANCE',
+    // A .fig file stores a vector mask as OUTLINE.
+    maskType: (nc.maskType === 'OUTLINE' ? 'VECTOR' : (nc.maskType ?? 'ALPHA')) as
+      | 'ALPHA'
+      | 'VECTOR'
+      | 'LUMINANCE',
     maskIsOutline: nc.maskIsOutline ?? false,
     expanded: true,
     autoRename: (nc.autoRename ?? true) as boolean,
@@ -1205,6 +1231,7 @@ export const FIGMA_RAW_NODE_FIELD_KEYS = [
   'textUserLayoutVersion',
   'textExplicitLayoutVersion',
   'fontVariations',
+  'detachOpticalSizeFromFontSize',
   'fontVariantCommonLigatures',
   'fontVariantContextualLigatures',
   'toggledOnOTFeatures',

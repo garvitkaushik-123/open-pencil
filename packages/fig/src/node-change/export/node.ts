@@ -1,5 +1,6 @@
 import type { DerivedSymbolOverride } from '#fig/instance-overrides/types'
 import { effectiveFigmaRawNodeFields, effectiveFigmaSourcePayload } from '#fig/source-metadata'
+import { compact } from 'es-toolkit/array'
 
 import type { NodeChange } from '@open-pencil/kiwi/fig/codec'
 import { stringToGuid } from '@open-pencil/kiwi/fig/guid'
@@ -12,13 +13,12 @@ import type {
 } from '@open-pencil/scene-graph'
 import {
   DEFAULT_STROKE_MITER_LIMIT,
-  DEFAULT_STROKE_WEIGHT,
-  isGeneratedFrame,
-  OPEN_PENCIL_PLUGIN_DATA,
-  withPluginData
-} from '@open-pencil/scene-graph'
+  DEFAULT_STROKE_WEIGHT
+} from '@open-pencil/scene-graph/constants'
+import { isGeneratedFrame } from '@open-pencil/scene-graph/generated'
 import { layoutGridCount } from '@open-pencil/scene-graph/layout'
 import { siblingOrderKeys } from '@open-pencil/scene-graph/order-keys'
+import { OPEN_PENCIL_PLUGIN_DATA, withPluginData } from '@open-pencil/scene-graph/plugin-data'
 import type { GUID, Matrix, Vector } from '@open-pencil/scene-graph/primitives'
 
 /* eslint-disable max-lines */
@@ -33,6 +33,11 @@ import {
   serializePluginRelaunchData
 } from '../plugin-data'
 import { serializeNodeStatus } from '../status'
+import {
+  componentPropAssignment,
+  componentPropertyValue,
+  componentPropertyVariableValue
+} from './assignments/values'
 import {
   applyColorVariableBinding,
   createFillPaints,
@@ -50,7 +55,7 @@ import {
 import { generatedFrameRecord, writesGeneratedFrame } from './generated'
 import { mergeOverrides, serializeRuntimePropertyOverrides } from './override-claims'
 import { exportedNode } from './resolved-bindings'
-import { slotContentAssignment, slotDefinitionFields } from './slots'
+import { slotDefinitionFields } from './slots'
 import { serializeText } from './text'
 
 export type { KiwiNodeChange, SceneNodeToKiwiContext } from './context'
@@ -117,46 +122,6 @@ export function buildAssetRefToVarGuidMap(
 function componentPropertyTypeForKiwi(type: string) {
   if (type === 'BOOLEAN') return 'BOOL'
   return type
-}
-
-function componentPropertyValue(
-  type: string,
-  value: string,
-  context: SceneNodeToKiwiContext,
-  localIdCounter: { value: number }
-) {
-  if (type === 'BOOLEAN') return { boolValue: value === 'true' }
-  if (type === 'INSTANCE_SWAP') {
-    const target = context.graph.getNode(value)
-    const guid = target
-      ? getOrCreateNodeGuid(context, target.id, localIdCounter)
-      : parseGuidOrNull(value)
-    return guid ? { guidValue: guid } : { textValue: { characters: value } }
-  }
-  return { textValue: { characters: value } }
-}
-
-function componentPropertyVariableValue(
-  type: string,
-  value: string,
-  context: SceneNodeToKiwiContext,
-  localIdCounter: { value: number }
-) {
-  const legacy = componentPropertyValue(type, value, context, localIdCounter)
-  if (type === 'BOOLEAN')
-    return {
-      value: { boolValue: value === 'true' },
-      dataType: 'BOOLEAN',
-      resolvedDataType: 'BOOLEAN'
-    }
-  if (type === 'INSTANCE_SWAP' && 'guidValue' in legacy) {
-    return {
-      value: { symbolIdValue: { guid: legacy.guidValue } },
-      dataType: 'SYMBOL_ID',
-      resolvedDataType: 'SYMBOL_ID'
-    }
-  }
-  return { value: { textValue: value }, dataType: 'STRING', resolvedDataType: 'STRING' }
 }
 
 function serializeVariableModes(
@@ -722,25 +687,11 @@ function applyComponentMetadata(
   }
 
   applyParameterReferences(nc, parameterRefs)
-  const componentPropAssignments = Object.entries(node.componentPropertyAssignments)
-    .map(([propertyId, value]) => {
-      const definition = context.componentPropertyDefinitionsById.get(propertyId)
-      if (!definition) return null
-      if (definition.type === 'SLOT')
-        return slotContentAssignment(
-          context,
-          node,
-          propertyId,
-          getOrCreatePropertyGuid(context, propertyId, localIdCounter),
-          localIdCounter
-        )
-      return {
-        defID: getOrCreatePropertyGuid(context, propertyId, localIdCounter),
-        value: componentPropertyValue(definition.type, value, context, localIdCounter),
-        varValue: componentPropertyVariableValue(definition.type, value, context, localIdCounter)
-      }
-    })
-    .filter((assignment): assignment is NonNullable<typeof assignment> => assignment !== null)
+  const componentPropAssignments = compact(
+    Object.entries(node.componentPropertyAssignments).map(([propertyId, value]) =>
+      componentPropAssignment(context, node, propertyId, value, localIdCounter)
+    )
+  )
   if (
     shouldSerializeRawBackedField(
       node,

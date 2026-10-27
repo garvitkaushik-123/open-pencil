@@ -2,8 +2,7 @@ import { useEventListener } from '@vueuse/core'
 import { createKeybindingsHandler } from 'tinykeys'
 import type { KeyBindingMap } from 'tinykeys'
 
-import { editorCommandMetadata } from '@open-pencil/vue'
-import type { EditorCommandId } from '@open-pencil/vue'
+import { editorCommandMetadata, type EditorCommandId } from '@open-pencil/vue/editor/commands'
 
 import { isCloudBinding, openVersionDialog } from '@/app/cloud/integration'
 import { useComments } from '@/app/comments/use'
@@ -281,7 +280,24 @@ export function registerKeyboardShortcuts(options: KeyboardShortcutOptions) {
       keys: appMenuTinykeysShortcut('close') ?? '$mod+KeyW',
       run: ({ closeActiveTab }) => closeActiveTab()
     },
-    { id: 'new-tab', keys: ['$mod+KeyN', '$mod+KeyT'], run: ({ createTab }) => createTab() },
+    {
+      id: 'new-design',
+      keys: appMenuTinykeysShortcut('new') ?? '$mod+KeyN',
+      run: ({ createTab }) => createTab()
+    },
+    { id: 'show-home', keys: '$mod+KeyT', run: ({ showHome }) => showHome() },
+    {
+      id: 'next-tab',
+      keys: 'Control+Tab',
+      run: ({ switchAdjacentTab }) => switchAdjacentTab(1),
+      global: true
+    },
+    {
+      id: 'previous-tab',
+      keys: 'Control+Shift+Tab',
+      run: ({ switchAdjacentTab }) => switchAdjacentTab(-1),
+      global: true
+    },
     {
       id: 'rename-selection',
       keys: appMenuTinykeysShortcut('selection.rename') ?? '$mod+KeyR',

@@ -8,14 +8,16 @@ import {
   parseResolveDocumentShare,
   parseUpdateDocumentShare
 } from '#cloud/contract'
-import type { CloudActor } from '#cloud/server/auth'
+import type { CloudActor, CloudSessionResolver } from '#cloud/server/auth'
 import type { CloudDatabase } from '#cloud/server/db'
-import { CLOUD_RATE_LIMITS, createActorRateLimiter } from '#cloud/server/rate-limit'
+import { CLOUD_RATE_LIMITS, createRouteRateLimiter } from '#cloud/server/rate-limit'
 import { sharingRoute } from '#cloud/server/sharing/http'
 import type { DocumentSharingService } from '#cloud/server/sharing/service'
 import { validatedJSON } from '#cloud/server/validation'
 import { Hono } from 'hono'
 import type { Kysely } from 'kysely'
+
+import { shareActor } from './actor'
 
 export type SharingRouteEnvironment = {
   Variables: { actor: CloudActor }
@@ -29,7 +31,7 @@ export function createDocumentSharingRoutes(
   if (rateLimit) {
     router.use(
       '/documents/:documentId/invitations',
-      createActorRateLimiter(
+      createRouteRateLimiter(
         rateLimit.database,
         rateLimit.secret,
         CLOUD_RATE_LIMITS.invitationMutation,
@@ -202,7 +204,10 @@ export function createDocumentSharingRoutes(
     )
 }
 
-export function createPublicSharingRoutes(service: DocumentSharingService) {
+export function createPublicSharingRoutes(
+  service: DocumentSharingService,
+  resolveSession?: CloudSessionResolver
+) {
   return new Hono()
     .post(
       '/invitations/continuations',
@@ -237,7 +242,8 @@ export function createPublicSharingRoutes(service: DocumentSharingService) {
         context.json({
           resolution: await service.resolveShare(
             context.req.param('shareId'),
-            context.req.valid('json')
+            context.req.valid('json'),
+            await shareActor(context.req.raw, resolveSession)
           )
         })
       )

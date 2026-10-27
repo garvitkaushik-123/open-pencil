@@ -15,7 +15,7 @@ import {
   exposedInstances,
   instanceExposureIssue,
   resolveComponentPropertyValue
-} from '@open-pencil/scene-graph'
+} from '@open-pencil/scene-graph/components'
 import { cloneNodeProps } from '@open-pencil/scene-graph/copy'
 
 import { becomesComponent, componentWrapProps } from '#core/editor/components/create'
@@ -188,9 +188,16 @@ function componentProperties(
 ): FigmaComponentProperties {
   const node = raw(target, internals)
   if (node.type !== 'INSTANCE') return {}
+  // A variant value is the instance's own variant, as Figma reports it, not an assignment.
+  const variant = variantPropertiesOf(graph(target, internals), node)
   return Object.fromEntries(
     sharedComponentPropertyDefinitions(graph(target, internals), node).map((definition) => {
-      const value = node.componentPropertyAssignments[definition.id] ?? definition.defaultValue
+      const own =
+        definition.type === 'VARIANT' && variant && Object.hasOwn(variant, definition.name)
+          ? variant[definition.name]
+          : undefined
+      const assigned = node.componentPropertyAssignments[definition.id] ?? definition.defaultValue
+      const value = own ?? assigned
       return [
         propertyName(definition),
         {
