@@ -1,3 +1,4 @@
+import { uniqBy } from 'es-toolkit'
 import * as v from 'valibot'
 
 import type { Fill, SceneNode, TextLength } from '@open-pencil/scene-graph'
@@ -45,7 +46,16 @@ const textPropsSchema = v.object({
   textDecorationThickness: v.optional(autoLengthSchema),
   textUnderlineOffset: v.optional(autoLengthSchema),
   textDecorationSkipInk: v.optional(v.boolean()),
-  fontFeatures: v.optional(v.record(openTypeTagSchema, v.boolean())),
+  fontFeatures: v.optional(
+    v.pipe(
+      v.record(openTypeTagSchema, v.boolean()),
+      // Tags are stored in capitals, so `liga` and `LIGA` are the same feature.
+      v.check((features) => {
+        const tags = Object.keys(features)
+        return uniqBy(tags, (tag) => tag.toUpperCase()).length === tags.length
+      }, 'Expected each feature tag once, in any case')
+    )
+  ),
   fontVariations: v.optional(v.record(openTypeTagSchema, lengthSchema)),
   lang: v.optional(v.nullable(v.pipe(v.string(), v.trim(), v.nonEmpty()))),
   fontOpticalSizing: v.optional(v.picklist([AUTO, 'none'])),

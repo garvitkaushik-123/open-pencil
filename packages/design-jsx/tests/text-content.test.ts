@@ -149,6 +149,12 @@ describe('Span', () => {
     expect(auto.node.opticalSizeFromFontSize).toBe(true)
   })
 
+  test('rejects a feature tag given twice in different cases', async () => {
+    await expect(
+      renderText('<Text fontFeatures={{ liga: true, LIGA: false }}>a</Text>')
+    ).rejects.toThrow('Expected each feature tag once')
+  })
+
   test('rejects a font setting tag that is not four characters', async () => {
     await expect(renderText('<Text fontFeatures={{ tabular: true }}>a</Text>')).rejects.toThrow(
       'Invalid <Text> props'
