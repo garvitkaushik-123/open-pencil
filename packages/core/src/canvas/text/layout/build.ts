@@ -183,7 +183,7 @@ function markerNode(node: ParagraphNode, item: TextListItem, style: ListStyle): 
     fontVariations: override?.fontVariations ?? node.fontVariations,
     fontFeatures:
       item.listType === 'ORDERED' ? [...features, { tag: 'TNUM', enabled: true }] : features,
-    textLanguage: override?.textLanguage ?? node.textLanguage,
+    textLanguage: override?.textLanguage !== undefined ? override.textLanguage : node.textLanguage,
     styleRuns: override?.fills
       ? [{ start: 0, length: item.marker.length, style: { fills: override.fills } }]
       : [],
