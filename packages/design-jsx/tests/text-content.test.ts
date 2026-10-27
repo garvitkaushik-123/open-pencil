@@ -116,7 +116,7 @@ describe('Span', () => {
     const { node, warnings } = await renderText(
       '<Text fontFeatures={{ liga: false }} fontVariations={{ wght: 450 }} lang="en">a<Span fontFeatures={{ tnum: true, liga: false }} fontVariations={{ wght: 650, wdth: 90 }} lang="de">b</Span></Text>'
     )
-    expect(node.fontFeatures).toEqual([{ tag: 'liga', enabled: false }])
+    expect(node.fontFeatures).toEqual([{ tag: 'LIGA', enabled: false }])
     expect(node.fontVariations).toEqual([{ axis: 'wght', value: 450 }])
     expect(node.textLanguage).toBe('en')
     expect(node.styleRuns).toEqual([
@@ -125,8 +125,8 @@ describe('Span', () => {
         length: 1,
         style: {
           fontFeatures: [
-            { tag: 'tnum', enabled: true },
-            { tag: 'liga', enabled: false }
+            { tag: 'TNUM', enabled: true },
+            { tag: 'LIGA', enabled: false }
           ],
           fontVariations: [
             { axis: 'wght', value: 650 },

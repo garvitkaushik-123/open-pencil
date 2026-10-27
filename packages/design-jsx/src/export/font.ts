@@ -12,7 +12,7 @@ export function collectFontSettingProps(style: FontSettings, props: JSXProp[]): 
   if (style.fontFeatures) {
     props.push([
       'fontFeatures',
-      Object.fromEntries(style.fontFeatures.map(({ tag, enabled }) => [tag, enabled]))
+      Object.fromEntries(style.fontFeatures.map(({ tag, enabled }) => [tag.toLowerCase(), enabled]))
     ])
   }
   if (style.fontVariations) {

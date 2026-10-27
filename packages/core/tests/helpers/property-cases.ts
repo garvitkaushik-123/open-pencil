@@ -276,8 +276,8 @@ export const PROPERTY_CASES: RoundTripCase[] = [
   leafCase('text font settings', 'TEXT', {
     text: 'Numbers 0123',
     fontFeatures: [
-      { tag: 'tnum', enabled: true },
-      { tag: 'liga', enabled: false }
+      { tag: 'TNUM', enabled: true },
+      { tag: 'LIGA', enabled: false }
     ],
     fontVariations: [
       { axis: 'wght', value: 650 },

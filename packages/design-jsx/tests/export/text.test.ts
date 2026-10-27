@@ -117,7 +117,7 @@ describe('rich text export', () => {
   test('writes font settings on the text and on spans', () => {
     const code = exportText({
       text: 'ab',
-      fontFeatures: [{ tag: 'liga', enabled: false }],
+      fontFeatures: [{ tag: 'LIGA', enabled: false }],
       fontVariations: [{ axis: 'wght', value: 450 }],
       textLanguage: 'en',
       styleRuns: [
@@ -125,7 +125,7 @@ describe('rich text export', () => {
           start: 1,
           length: 1,
           style: {
-            fontFeatures: [{ tag: 'tnum', enabled: true }],
+            fontFeatures: [{ tag: 'TNUM', enabled: true }],
             fontVariations: [{ axis: 'wght', value: 650 }],
             textLanguage: 'de'
           }

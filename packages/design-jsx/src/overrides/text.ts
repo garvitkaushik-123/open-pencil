@@ -84,7 +84,11 @@ export function applyTextDetailOverrides(
   if (parsed.textDecorationSkipInk !== undefined)
     o.textDecorationSkipInk = parsed.textDecorationSkipInk
   if (parsed.fontFeatures) {
-    o.fontFeatures = Object.entries(parsed.fontFeatures).map(([tag, enabled]) => ({ tag, enabled }))
+    // The scene keeps feature tags as Figma does, in capitals.
+    o.fontFeatures = Object.entries(parsed.fontFeatures).map(([tag, enabled]) => ({
+      tag: tag.toUpperCase(),
+      enabled
+    }))
   }
   if (parsed.fontVariations) {
     o.fontVariations = Object.entries(parsed.fontVariations).map(([axis, value]) => ({
