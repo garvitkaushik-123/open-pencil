@@ -48,6 +48,7 @@ const textPropsSchema = v.object({
   fontFeatures: v.optional(v.record(openTypeTagSchema, v.boolean())),
   fontVariations: v.optional(v.record(openTypeTagSchema, lengthSchema)),
   lang: v.optional(v.nullable(v.pipe(v.string(), v.trim(), v.nonEmpty()))),
+  fontOpticalSizing: v.optional(v.picklist([AUTO, 'none'])),
   paragraphSpacing: v.optional(lengthSchema),
   listSpacing: v.optional(lengthSchema),
   paragraphIndent: v.optional(lengthSchema),
@@ -92,6 +93,8 @@ export function applyTextDetailOverrides(
     }))
   }
   if (parsed.lang !== undefined) o.textLanguage = parsed.lang
+  if (parsed.fontOpticalSizing !== undefined)
+    o.opticalSizeFromFontSize = parsed.fontOpticalSizing === AUTO
   if (parsed.paragraphSpacing !== undefined) o.paragraphSpacing = parsed.paragraphSpacing
   if (parsed.listSpacing !== undefined) o.listSpacing = parsed.listSpacing
   if (parsed.paragraphIndent !== undefined) o.paragraphIndent = parsed.paragraphIndent

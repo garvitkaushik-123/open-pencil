@@ -158,6 +158,7 @@ export const DESIGN_JSX_SUPPORTED_PROPERTY_NAMES = [
   'fontFeatures',
   'fontVariations',
   'lang',
+  'fontOpticalSizing',
   'textCase',
   'paragraphSpacing',
   'paragraphIndent',

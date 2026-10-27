@@ -242,6 +242,12 @@ function ownTextFields<K extends keyof typeof TEXT_DEFAULTS>(
   return omitBy(pick(node, fields), (value, key) => isEqual(value, TEXT_DEFAULTS[key]))
 }
 
+/** A text's font settings, and whether its optical size follows the font size. */
+function collectTextFontSettingProps(node: SceneNode, props: JSXProp[]): void {
+  collectFontSettingProps(ownTextFields(node, FONT_SETTING_FIELDS), props)
+  if (!node.opticalSizeFromFontSize) props.push(['fontOpticalSizing', 'none'])
+}
+
 /** A font weight as `weight` writes it, by name for the weights that have one. */
 export function fontWeightValue(weight: number): string | number {
   if (weight === 700) return 'bold'
@@ -270,7 +276,7 @@ function collectTextNodeProps(node: SceneNode, props: JSXProp[]): void {
   if (node.textDecoration !== 'NONE')
     props.push(['textDecoration', TEXT_DECORATION.print(node.textDecoration)])
   collectDecorationProps(ownTextFields(node, DECORATION_FIELDS), node, props)
-  collectFontSettingProps(ownTextFields(node, FONT_SETTING_FIELDS), props)
+  collectTextFontSettingProps(node, props)
   if (node.textCase !== 'ORIGINAL') props.push(['textCase', TEXT_CASE.print(node.textCase)])
   if (node.maxLines != null) props.push(['maxLines', node.maxLines])
   if (node.textTruncation === 'ENDING' && node.maxLines == null) props.push(['truncate', true])

@@ -139,6 +139,16 @@ describe('Span', () => {
     expect(warnings).toEqual([])
   })
 
+  test('takes the optical size from fontVariations only with fontOpticalSizing none', async () => {
+    const { node } = await renderText(
+      '<Text fontOpticalSizing="none" fontVariations={{ opsz: 14 }}>a</Text>'
+    )
+    expect(node.opticalSizeFromFontSize).toBe(false)
+    expect(node.fontVariations).toEqual([{ axis: 'opsz', value: 14 }])
+    const auto = await renderText('<Text fontVariations={{ opsz: 14 }}>a</Text>')
+    expect(auto.node.opticalSizeFromFontSize).toBe(true)
+  })
+
   test('rejects a font setting tag that is not four characters', async () => {
     await expect(renderText('<Text fontFeatures={{ tabular: true }}>a</Text>')).rejects.toThrow(
       'Invalid <Text> props'

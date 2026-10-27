@@ -137,6 +137,17 @@ describe('rich text export', () => {
     )
   })
 
+  test('writes an optical size that does not follow the font size', () => {
+    const code = exportText({
+      text: 'a',
+      fontVariations: [{ axis: 'opsz', value: 14 }],
+      opticalSizeFromFontSize: false
+    })
+    expect(code).toBe(
+      '<Text name="Note" color="#000000" fontVariations={{ opsz: 14 }} fontOpticalSizing="none">a</Text>'
+    )
+  })
+
   test('writes a percent of the font size as a percent string', () => {
     const code = exportText({
       text: 'ab',

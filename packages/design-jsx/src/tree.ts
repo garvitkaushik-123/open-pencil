@@ -181,6 +181,11 @@ export type StyleProps = {
   fontVariations?: Record<string, number>
   /** The language the text is in, as a BCP 47 tag such as `de` or `sr-Latn`. */
   lang?: string | null
+  /**
+   * Whether a variable font's optical size follows the font size (`auto`, the default) or takes
+   * the `opsz` in `fontVariations` (`none`), as CSS's `font-optical-sizing`.
+   */
+  fontOpticalSizing?: 'auto' | 'none'
   font?: string
   fontFamily?: string
   weight?: number | 'bold' | 'medium' | 'normal'

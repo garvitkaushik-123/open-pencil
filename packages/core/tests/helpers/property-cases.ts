@@ -279,7 +279,11 @@ export const PROPERTY_CASES: RoundTripCase[] = [
       { tag: 'tnum', enabled: true },
       { tag: 'liga', enabled: false }
     ],
-    fontVariations: [{ axis: 'wght', value: 650 }],
+    fontVariations: [
+      { axis: 'wght', value: 650 },
+      { axis: 'opsz', value: 14 }
+    ],
+    opticalSizeFromFontSize: false,
     textLanguage: 'de'
   }),
   leafCase('text paragraph spacing', 'TEXT', {
